@@ -3,23 +3,28 @@
 #  PRODUCTION CONFIG — optimized for 60+ concurrent agents
 # ============================================================
 
-# --- Manager Server ---
-MANAGER_HOST = "0.0.0.0"           # Listen on all interfaces
-MANAGER_PORT = 9000                # Port agents connect to
+# === Manager Server ===
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+MANAGER_HOST = os.getenv("MANAGER_HOST", "0.0.0.0")           # Listen on all interfaces
+MANAGER_PORT = int(os.getenv("MANAGER_PORT", "9000"))         # Port agents connect to
 MANAGER_BUFFER_SIZE = 8192         # Increased buffer for bulk events
 MANAGER_MAX_CONNECTIONS = 100      # Max concurrent agent connections
 
 # --- API Server ---
-API_HOST = "0.0.0.0"
-API_PORT = 8000
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
 
 # --- Database ---
-DB_PATH = "soc_platform.db"        # SQLite file path
+DB_PATH = os.getenv("DB_PATH", "soc_platform.db")        # SQLite file path
 
 # --- Agent ---
-AGENT_SEND_INTERVAL = 2            # Seconds between log batches (reduced server load)
-AGENT_ID = "agent-001"             # Unique ID per machine (change per install)
-AGENT_HOSTNAME = "lab-machine-1"   # Human-readable name
+AGENT_SEND_INTERVAL = int(os.getenv("AGENT_SEND_INTERVAL", "2"))            # Seconds between log batches
+AGENT_ID = os.getenv("AGENT_ID", "agent-001")             # Unique ID per machine (change per install)
+AGENT_HOSTNAME = os.getenv("AGENT_HOSTNAME", "lab-machine-1")   # Human-readable name
 AGENT_RECONNECT_DELAY = 5          # Seconds to wait before reconnecting
 AGENT_HEARTBEAT_INTERVAL = 10      # Seconds between heartbeats
 

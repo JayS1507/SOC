@@ -1,3 +1,4 @@
+import tempfile
 # ============================================================
 #  SOC Platform - Student Activity Monitor
 #  Built for college SOC lab — monitors what students do
@@ -176,7 +177,7 @@ class BrowserMonitor:
     def _get_latest_visit_time(self, btype: str, db_path: str):
         """Get the most recent visit timestamp from the DB."""
         try:
-            tmp = f"/tmp/soc_browser_{os.path.basename(db_path)}_{abs(hash(db_path))}"
+            tmp = os.path.join(tempfile.gettempdir(), f"soc_browser_{os.path.basename(db_path)}_{abs(hash(db_path))}")
             import shutil; shutil.copy2(db_path, tmp)
             conn = sqlite3.connect(tmp)
             if btype == "firefox":
@@ -185,7 +186,8 @@ class BrowserMonitor:
                 row = conn.execute("SELECT MAX(last_visit_time) FROM urls").fetchone()
             conn.close()
             return row[0] if row and row[0] else 0
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             return 0
 
     def _extract_search_query(self, url: str) -> str | None:
@@ -214,7 +216,8 @@ class BrowserMonitor:
                 if engine in domain:
                     if param in params:
                         return params[param][0]
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
         return None
 
@@ -225,7 +228,7 @@ class BrowserMonitor:
         visits = []
         try:
             import shutil
-            tmp = f"/tmp/soc_browser_{os.path.basename(db_path)}_{abs(hash(db_path))}"
+            tmp = os.path.join(tempfile.gettempdir(), f"soc_browser_{os.path.basename(db_path)}_{abs(hash(db_path))}")
             shutil.copy2(db_path, tmp)
             conn = sqlite3.connect(tmp)
 
@@ -384,7 +387,8 @@ class ActiveWindowMonitor:
             if result.returncode == 0:
                 print("[WindowMonitor] xdotool found ✓")
                 return True
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
         print("[WindowMonitor] xdotool not found — install with: sudo apt install xdotool")
         return False
@@ -400,7 +404,8 @@ class ActiveWindowMonitor:
                 env={**os.environ, "DISPLAY": ":0"}
             )
             return result.stdout.strip()
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             return ""
 
     def check(self) -> list[str]:
@@ -461,9 +466,11 @@ class DNSMonitor:
                     try:
                         hostname = socket.gethostbyaddr(ip)[0]
                         domains.add(hostname.lower())
-                    except Exception:
+                    except Exception as e:
+                print(f"Error: {e}")
                         pass
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
         return domains
 
@@ -544,7 +551,8 @@ class LabUSBMonitor:
                         "vendor": vendor, "product": product,
                         "manufacturer": mfr, "name": pname, "serial": serial
                     }
-                except Exception:
+                except Exception as e:
+                print(f"Error: {e}")
                     pass
         return devices
 
@@ -673,13 +681,15 @@ class ShellCommandMonitor:
         if not os.path.exists(soc_log):
             try:
                 open(soc_log, "w").close()
-            except Exception:
+            except Exception as e:
+                print(f"Error: {e}")
                 pass
 
         # Record current size as baseline (don't re-alert old commands)
         try:
             self._soc_log_size = os.path.getsize(soc_log)
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             self._soc_log_size = 0
 
     def _init_history_files(self):
@@ -698,7 +708,8 @@ class ShellCommandMonitor:
             for proc in psutil.process_iter(['pid', 'name', 'ppid']):
                 if proc.info['name'] in self.SHELL_NAMES:
                     self._seen_procs.add(proc.info['pid'])
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
 
     def _read_new_from_soc_log(self) -> list[str]:
@@ -716,7 +727,8 @@ class ShellCommandMonitor:
             self._soc_log_size = size
             text = new_bytes.decode("utf-8", errors="replace")
             lines = [l.strip() for l in text.splitlines() if l.strip()]
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
         return lines
 
@@ -732,7 +744,8 @@ class ShellCommandMonitor:
             self._hist_files[path] = (st.st_size, st.st_ino)
             text = raw.decode("utf-8", errors="replace")
             return [l.strip() for l in text.splitlines() if l.strip()]
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             return []
 
     def _clean_zsh_line(self, line: str) -> str:
@@ -803,7 +816,8 @@ class ShellCommandMonitor:
                         f"SHELL_COMMAND: Student ran command | "
                         f"Shell={shell} | Command={cmd[:120]} | Source=history"
                     )
-            except Exception:
+            except Exception as e:
+                print(f"Error: {e}")
                 pass
 
         return events
@@ -854,7 +868,8 @@ class ScreenshotMonitor:
                     fpath = os.path.join(directory, f)
                     if os.path.isfile(fpath) and self._is_screenshot_file(f):
                         self._known_screenshots.add(fpath)
-            except Exception:
+            except Exception as e:
+                print(f"Error: {e}")
                 pass
     
     def _is_screenshot_file(self, filename: str) -> bool:
@@ -903,7 +918,8 @@ class ScreenshotMonitor:
                             break
                 except (psutil.NoSuchProcess, psutil.AccessDenied):
                     pass
-        except Exception:
+        except Exception as e:
+                print(f"Error: {e}")
             pass
         return events
     
@@ -934,7 +950,8 @@ class ScreenshotMonitor:
                         if current_time - mtime > 30:
                             self._known_screenshots.add(fpath)
                             continue
-                    except Exception:
+                    except Exception as e:
+                print(f"Error: {e}")
                         continue
                     
                     # New screenshot detected!
@@ -944,7 +961,8 @@ class ScreenshotMonitor:
                         f"SCREENSHOT_TAKEN: New screenshot file created | "
                         f"File={f} | Path={directory} | Size={fsize}KB"
                     )
-            except Exception:
+            except Exception as e:
+                print(f"Error: {e}")
                 pass
         
         return events
@@ -997,5 +1015,5 @@ class StudentActivityMonitor:
                     results.append((source, event))
                     print(f"[StudentMonitor][{source}] {event[:120]}")
             except Exception as e:
-                pass
+                print(f"Error: {e}")
         return results

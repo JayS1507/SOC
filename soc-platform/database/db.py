@@ -1,3 +1,5 @@
+from shared.logger import get_logger
+logger = get_logger("Database")
 # ============================================================
 #  SOC Platform - Database Layer
 #  SQLite optimized for 60+ concurrent agents
@@ -91,8 +93,8 @@ def init_db():
     cur.execute("CREATE INDEX IF NOT EXISTS idx_alerts_ack ON alerts(acknowledged)")
 
     conn.commit()
-    conn.close()
-    print(f"[DB] Database initialized at {DB_PATH}")
+    conn.close(); _local.conn = None
+    logger.info(f"Database initialized at {DB_PATH}")
 
 
 # ─────────────────────────────────────────────
@@ -110,13 +112,13 @@ def upsert_agent(agent_id: str, hostname: str):
             status    = 'active'
     """, (agent_id, hostname, time.time()))
     conn.commit()
-    conn.close()
+    conn.close(); _local.conn = None
 
 
 def get_all_agents() -> list[dict]:
     conn = get_connection()
     rows = conn.execute("SELECT * FROM agents ORDER BY last_seen DESC").fetchall()
-    conn.close()
+    conn.close(); _local.conn = None
     return [dict(r) for r in rows]
 
 
@@ -131,7 +133,7 @@ def insert_log(event: LogEvent):
         VALUES (?, ?, ?, ?, ?)
     """, (event.agent_id, event.hostname, event.source, event.raw_log, event.timestamp))
     conn.commit()
-    conn.close()
+    conn.close(); _local.conn = None
 
 
 def get_logs(limit: int = 100, agent_id: str = None) -> list[dict]:
@@ -146,7 +148,7 @@ def get_logs(limit: int = 100, agent_id: str = None) -> list[dict]:
         rows = conn.execute(
             "SELECT * FROM logs ORDER BY timestamp DESC LIMIT ?", (limit,)
         ).fetchall()
-    conn.close()
+    conn.close(); _local.conn = None
     return [dict(r) for r in rows]
 
 
@@ -165,22 +167,36 @@ def insert_alert(alert: Alert):
         alert.agent_id, alert.hostname, alert.matched_log, alert.timestamp
     ))
     conn.commit()
-    conn.close()
+    conn.close(); _local.conn = None
 
 
-def get_alerts(limit: int = 100, severity: str = None) -> list[dict]:
-    """Fetch recent alerts, optionally filtered by severity."""
+def get_alerts(limit: int = 100, severity: str = None, date_str: str = None) -> list[dict]:
+    """Fetch recent alerts, optionally filtered by severity and date (YYYY-MM-DD)."""
     conn = get_connection()
+    
+    query = "SELECT * FROM alerts WHERE 1=1"
+    params = []
+    
     if severity:
-        rows = conn.execute(
-            "SELECT * FROM alerts WHERE severity=? ORDER BY timestamp DESC LIMIT ?",
-            (severity, limit)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT * FROM alerts ORDER BY timestamp DESC LIMIT ?", (limit,)
-        ).fetchall()
-    conn.close()
+        query += " AND severity=?"
+        params.append(severity)
+        
+    if date_str:
+        import datetime
+        try:
+            dt = datetime.datetime.strptime(date_str, '%Y-%m-%d')
+            start_ts = dt.timestamp()
+            end_ts = start_ts + 86400
+            query += " AND timestamp >= ? AND timestamp < ?"
+            params.extend([start_ts, end_ts])
+        except ValueError:
+            pass
+            
+    query += " ORDER BY timestamp DESC LIMIT ?"
+    params.append(limit)
+    
+    rows = conn.execute(query, tuple(params)).fetchall()
+    conn.close(); _local.conn = None
     return [dict(r) for r in rows]
 
 
@@ -189,7 +205,7 @@ def acknowledge_alert(alert_id: int):
     conn = get_connection()
     conn.execute("UPDATE alerts SET acknowledged=1 WHERE id=?", (alert_id,))
     conn.commit()
-    conn.close()
+    conn.close(); _local.conn = None
 
 
 def get_alert_counts() -> dict:
@@ -201,5 +217,5 @@ def get_alert_counts() -> dict:
         WHERE acknowledged = 0
         GROUP BY severity
     """).fetchall()
-    conn.close()
+    conn.close(); _local.conn = None
     return {r["severity"]: r["count"] for r in rows}
