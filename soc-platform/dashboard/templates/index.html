@@ -1,0 +1,1010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lab Monitor – Staff Dashboard</title>
+  <meta name="description" content="School lab monitoring dashboard for staff. View machine status and alerts at a glance.">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- React & Babel -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <style>
+    /* ─── Design Tokens (Dark Theme) ──────────────────────────────── */
+    :root {
+      --bg:           #0d1117;
+      --bg-surface:   #161b22;
+      --bg-surface-2: #1c2230;
+      --bg-hover:     #21262d;
+      --border:       #30363d;
+      --border-2:     #3d444d;
+      --text:         #e6edf3;
+      --text-2:       #8d96a0;
+      --text-3:       #545d68;
+
+      --critical:    #f85149;
+      --critical-bg: rgba(248,81,73,.12);
+      --critical-br: rgba(248,81,73,.3);
+      --high:        #e08d3c;
+      --high-bg:     rgba(224,141,60,.12);
+      --high-br:     rgba(224,141,60,.3);
+      --medium:      #d29922;
+      --medium-bg:   rgba(210,153,34,.12);
+      --medium-br:   rgba(210,153,34,.3);
+      --low:         #3fb950;
+      --low-bg:      rgba(63,185,80,.12);
+      --low-br:      rgba(63,185,80,.3);
+      --online:      #3fb950;
+      --offline:     #545d68;
+
+      --accent:      #58a6ff;
+      --accent-bg:   rgba(88,166,255,.12);
+      --accent-br:   rgba(88,166,255,.25);
+
+      --radius-sm: 8px;
+      --radius:    12px;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,.3);
+      --shadow:    0 4px 16px rgba(0,0,0,.4);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,.55);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    /* ─── Header ──────────────────────────────────────────────────── */
+    .header {
+      background: var(--bg-surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      height: 62px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-sm);
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(31,111,235,.4);
+    }
+    .header-title    { font-size: 17px; font-weight: 700; color: var(--text); letter-spacing: -.3px; }
+    .header-subtitle { font-size: 12px; color: var(--text-3); margin-top: 1px; }
+    .header-spacer   { flex: 1; }
+    .refresh-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12px; color: var(--text-2);
+      padding: 5px 12px;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--online);
+      animation: blink 2.5s ease infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    /* ─── Summary Bar ─────────────────────────────────────────────── */
+    .summary-bar {
+      background: linear-gradient(90deg, #1f2d45 0%, #162032 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 32px;
+      display: flex; align-items: center; gap: 28px;
+    }
+    .sum-item { display: flex; align-items: center; gap: 10px; }
+    .sum-icon { font-size: 20px; }
+    .sum-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+    .sum-label { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: .2px; }
+    .sum-sep   { width: 1px; height: 36px; background: var(--border); }
+
+    /* ─── Main Layout ─────────────────────────────────────────────── */
+    main {
+      padding: 24px 32px;
+      max-width: 1600px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 22px;
+    }
+    .col-left  { display: flex; flex-direction: column; gap: 18px; }
+    .col-right { display: flex; flex-direction: column; gap: 18px; }
+
+    /* ─── Card ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow-sm);
+    }
+    .card-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .card-title {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      display: flex; align-items: center; gap: 8px;
+    }
+    .card-count { font-size: 12px; color: var(--text-3); }
+
+    /* ─── Severity Stat Cards ─────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--bg-surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      cursor: pointer;
+      transition: all .18s ease;
+      box-shadow: var(--shadow-sm);
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      transition: opacity .18s;
+      opacity: 0;
+    }
+    .stat-card:hover { background: var(--bg-hover); border-color: var(--border-2); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .stat-card.active-filter { border-color: var(--border-2); }
+    .stat-card.active-filter::before { opacity: 1; }
+    .stat-label   { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .6px; margin-bottom: 10px; }
+    .stat-value   { font-size: 40px; font-weight: 700; line-height: 1; }
+    .stat-desc    { font-size: 11px; color: var(--text-3); margin-top: 6px; }
+
+    .stat-card.CRITICAL { border-color: var(--critical-br); }
+    .stat-card.CRITICAL::before { background: var(--critical); }
+    .stat-card.CRITICAL .stat-label { color: var(--critical); }
+    .stat-card.CRITICAL .stat-value { color: var(--critical); }
+    .stat-card.HIGH { border-color: var(--high-br); }
+    .stat-card.HIGH::before { background: var(--high); }
+    .stat-card.HIGH .stat-label { color: var(--high); }
+    .stat-card.HIGH .stat-value { color: var(--high); }
+    .stat-card.MEDIUM { border-color: var(--medium-br); }
+    .stat-card.MEDIUM::before { background: var(--medium); }
+    .stat-card.MEDIUM .stat-label { color: var(--medium); }
+    .stat-card.MEDIUM .stat-value { color: var(--medium); }
+    .stat-card.LOW { border-color: var(--low-br); }
+    .stat-card.LOW::before { background: var(--low); }
+    .stat-card.LOW .stat-label { color: var(--low); }
+    .stat-card.LOW .stat-value { color: var(--low); }
+
+    /* ─── Toolbar ─────────────────────────────────────────────────── */
+    .toolbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .tab-group {
+      display: flex;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 3px; gap: 2px;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-2);
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px; font-weight: 500; font-family: inherit;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { background: var(--bg-hover); color: var(--text); }
+    .tab-btn.active {
+      background: var(--bg-surface);
+      color: var(--accent);
+      box-shadow: var(--shadow-sm);
+      font-weight: 600;
+      border: 1px solid var(--border);
+    }
+    .toolbar-spacer { flex: 1; }
+    .search-input, .date-input {
+      padding: 7px 13px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 13px; font-family: inherit;
+      background: var(--bg-surface);
+      color: var(--text);
+      outline: none;
+      transition: border-color .15s;
+    }
+    .search-input:focus, .date-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+    .search-input::placeholder { color: var(--text-3); }
+    .search-input { width: 220px; }
+    .date-input   { color-scheme: dark; }
+
+    /* ─── Alert Table ─────────────────────────────────────────────── */
+    .alert-list { overflow-y: auto; max-height: calc(100vh - 340px); min-height: 280px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      background: var(--bg-surface-2);
+      padding: 10px 16px;
+      font-size: 11px; font-weight: 600; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: .5px;
+      border-bottom: 1px solid var(--border);
+      position: sticky; top: 0; z-index: 2;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px; vertical-align: middle;
+    }
+    .alert-row { cursor: pointer; transition: background .1s; }
+    .alert-row:hover td { background: var(--bg-hover); }
+
+    /* ─── Severity Badges ─────────────────────────────────────────── */
+    .sev-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 11px; font-weight: 600; letter-spacing: .3px;
+      white-space: nowrap;
+    }
+    .sev-badge::before {
+      content: ''; display: block;
+      width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    }
+    .sev-badge.CRITICAL { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical-br); }
+    .sev-badge.CRITICAL::before { background: var(--critical); }
+    .sev-badge.HIGH     { background: var(--high-bg);     color: var(--high);     border: 1px solid var(--high-br); }
+    .sev-badge.HIGH::before     { background: var(--high); }
+    .sev-badge.MEDIUM   { background: var(--medium-bg);   color: var(--medium);   border: 1px solid var(--medium-br); }
+    .sev-badge.MEDIUM::before   { background: var(--medium); }
+    .sev-badge.LOW      { background: var(--low-bg);      color: var(--low);      border: 1px solid var(--low-br); }
+    .sev-badge.LOW::before      { background: var(--low); }
+
+    /* ─── Source Badge ────────────────────────────────────────────── */
+    .src-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px; font-weight: 500;
+      background: var(--bg-surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-2);
+      white-space: nowrap;
+    }
+
+    /* ─── Acknowledge Button ──────────────────────────────────────── */
+    .ack-btn {
+      background: var(--accent-bg);
+      border: 1px solid var(--accent-br);
+      color: var(--accent);
+      padding: 5px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 12px; font-weight: 600; font-family: inherit;
+      transition: all .15s;
+      white-space: nowrap;
+    }
+    .ack-btn:hover {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(88,166,255,.35);
+      transform: translateY(-1px);
+    }
+
+    /* ─── Expand Detail ───────────────────────────────────────────── */
+    .expand-chevron { font-size: 11px; color: var(--text-3); transition: transform .2s; display: inline-block; }
+    .expand-chevron.open { transform: rotate(180deg); }
+
+    .detail-row td {
+      padding: 0 !important;
+      background: var(--bg) !important;
+      border-bottom: 1px solid var(--border);
+    }
+    .detail-grid {
+      padding: 20px 20px 20px 36px;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+    }
+    .detail-field {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+    }
+    .detail-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
+    .detail-key  { font-size: 11px; color: var(--text-3); font-weight: 500; margin-bottom: 3px; text-transform: uppercase; letter-spacing: .3px; }
+    .detail-val  { font-size: 13px; color: var(--text); font-weight: 500; word-break: break-word; line-height: 1.4; }
+
+    /* ─── Agent Cards ─────────────────────────────────────────────── */
+    .agents-grid { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+    .agent-card {
+      background: var(--bg-surface-2);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 13px 14px;
+      cursor: pointer;
+      transition: all .15s;
+    }
+    .agent-card:hover { border-color: var(--border-2); background: var(--bg-hover); }
+    .agent-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+    .agent-card-top { display: flex; align-items: center; gap: 9px; margin-bottom: 5px; }
+    .status-dot {
+      width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+    }
+    .status-dot.online  { background: var(--online);  box-shadow: 0 0 0 3px rgba(63,185,80,.25); }
+    .status-dot.offline { background: var(--offline); }
+    .agent-hostname  { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+    .status-label-badge {
+      font-size: 10px; font-weight: 600;
+      padding: 1px 7px; border-radius: 20px;
+    }
+    .status-label-badge.online  { background: var(--low-bg);  color: var(--online);  border: 1px solid var(--low-br); }
+    .status-label-badge.offline { background: var(--bg-hover); color: var(--offline); border: 1px solid var(--border); }
+    .agent-last-seen { font-size: 11px; color: var(--text-3); }
+
+    /* ─── Toast Notifications ─────────────────────────────────────── */
+    .toast-wrapper {
+      position: fixed; top: 76px; right: 22px;
+      z-index: 9999;
+      display: flex; flex-direction: column; gap: 10px;
+      width: 340px; pointer-events: none;
+    }
+    .toast {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      box-shadow: var(--shadow-lg);
+      pointer-events: all;
+      cursor: pointer;
+      border-left: 4px solid transparent;
+      animation: toastSlide .3s cubic-bezier(.4,0,.2,1);
+    }
+    .toast.CRITICAL { border-left-color: var(--critical); }
+    .toast.HIGH     { border-left-color: var(--high); }
+    .toast-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+    .toast-level {
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 2px 7px; border-radius: 20px;
+    }
+    .toast-level.CRITICAL { background: var(--critical-bg); color: var(--critical); border: 1px solid var(--critical-br); }
+    .toast-level.HIGH     { background: var(--high-bg);     color: var(--high);     border: 1px solid var(--high-br); }
+    .toast-machine { font-size: 12px; color: var(--text-2); font-weight: 500; }
+    .toast-close   { margin-left: auto; font-size: 14px; color: var(--text-3); }
+    .toast-close:hover { color: var(--text); }
+    .toast-body { font-size: 13px; color: var(--text); line-height: 1.5; }
+    .toast-time { font-size: 11px; color: var(--text-3); margin-top: 5px; }
+    @keyframes toastSlide {
+      from { transform: translateX(60px); opacity: 0; }
+      to   { transform: translateX(0);    opacity: 1; }
+    }
+
+    /* ─── Misc ────────────────────────────────────────────────────── */
+    .hostname-link { color: var(--accent); cursor: pointer; font-weight: 500; }
+    .hostname-link:hover { text-decoration: underline; }
+    .empty-state { padding: 60px 20px; text-align: center; color: var(--text-3); }
+    .empty-icon  { font-size: 44px; margin-bottom: 12px; }
+    .empty-title { font-size: 15px; font-weight: 600; color: var(--text-2); margin-bottom: 6px; }
+    .empty-desc  { font-size: 13px; }
+    .active-filter-chip {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent-bg); border: 1px solid var(--accent-br);
+      color: var(--accent); font-size: 12px; font-weight: 600;
+      padding: 4px 12px; border-radius: 20px; cursor: pointer;
+    }
+
+    @media (max-width: 1024px) {
+      main { grid-template-columns: 1fr; }
+      .stat-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+<script type="text/babel">
+  const { useState, useEffect, useRef, useMemo, useCallback } = React;
+  const API_BASE = '/api';
+
+  /* ─── Time Helpers ────────────────────────────────────────────── */
+  function fmtTime(ts) {
+    if (!ts) return '';
+    return new Date(ts * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtFull(ts) {
+    if (!ts) return '';
+    return new Date(ts * 1000).toLocaleString([], {
+      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+  }
+  function timeAgo(ts) {
+    const s = Math.floor(Date.now() / 1000 - ts);
+    if (s < 5)     return 'just now';
+    if (s < 60)    return `${s} seconds ago`;
+    if (s < 3600)  return `${Math.floor(s/60)} minute${Math.floor(s/60)===1?'':'s'} ago`;
+    if (s < 86400) return `${Math.floor(s/3600)} hour${Math.floor(s/3600)===1?'':'s'} ago`;
+    return `${Math.floor(s/86400)} day${Math.floor(s/86400)===1?'':'s'} ago`;
+  }
+
+  /* ─── Log Parser ──────────────────────────────────────────────── */
+  /*
+   * Handles all log formats emitted by the Windows agent:
+   *  BROWSER  → [ts] Browser=brave URL=https://... Title="..."
+   *  PROCESS  → Process Started: notepad.exe (PID: 1234, User: DOMAIN\user)
+   *  WINDOW   → Window Focus: Calculator (calc.exe)
+   *  PS       → PowerShell: Get-Process
+   *  USB      → USB Device Connected: Kingston DataTraveler (ID: USB\...)
+   *  EVENTLOG → [ts] EventID=4624 Type=AUDIT_SUCCESS Source=... User=... Computer=... Message:...
+   */
+  function parseLog(raw, ruleName) {
+    if (!raw) return [];
+    const fields = [];
+
+    // ── Timestamp bracket [2026-04-12T15:17:24...]
+    const tsMatch = raw.match(/^\[([^\]]+)\]/);
+    if (tsMatch) {
+      try {
+        const d = new Date(tsMatch[1]);
+        if (!isNaN(d)) fields.push({ icon: '🕐', label: 'Time', value: d.toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) });
+      } catch(_) {}
+    }
+
+    // ── BROWSER log  (Browser=... URL=... Title=...)
+    if (/Browser=/i.test(raw)) {
+      const kvRe = /([A-Za-z_][A-Za-z0-9_\-]*)=("([^"]*)"|([\S]+))/g;
+      let m;
+      while ((m = kvRe.exec(raw)) !== null) {
+        const key = m[1].toLowerCase();
+        const val = m[3] !== undefined ? m[3] : m[4];
+        if (key === 'browser') { fields.push({ icon: '🌐', label: 'Browser', value: capitalize(val) }); continue; }
+        if (key === 'url') {
+          try {
+            const url = new URL(val);
+            const domain = url.hostname.replace(/^www\./, '');
+            fields.push({ icon: '🔗', label: 'Site Visited', value: domain });
+            const q = url.searchParams.get('q') || url.searchParams.get('query') || url.searchParams.get('search');
+            if (q) fields.push({ icon: '🔍', label: 'Search Query', value: `"${q}"` });
+          } catch(_) { fields.push({ icon: '🔗', label: 'URL', value: val }); }
+          continue;
+        }
+        if (key === 'title') { fields.push({ icon: '📝', label: 'Page Title', value: val }); continue; }
+      }
+      return fields;
+    }
+
+    // ── WINDOWS EVENT LOG  (EventID=... Type=... Source=... User=... Computer=... Message:...)
+    if (/EventID=/i.test(raw)) {
+      const eidM = raw.match(/EventID=(\d+)/i);
+      const typM = raw.match(/Type=(\S+)/i);
+      const srcM = raw.match(/Source=([^\s]+)/i);
+      const usrM = raw.match(/User=([^\s]+)/i);
+      const cmpM = raw.match(/Computer=([^\s]+)/i);
+      const msgM = raw.match(/Message:\s*(.+)/is);
+
+      if (eidM) fields.push({ icon: '🔢', label: 'Event ID',  value: eidM[1] });
+      if (typM) fields.push({ icon: '⚡', label: 'Event Type', value: friendlyEventType(typM[1]) });
+      if (srcM) fields.push({ icon: '📦', label: 'Source',    value: srcM[1] });
+      if (usrM && usrM[1] !== 'N/A') fields.push({ icon: '👤', label: 'User',  value: usrM[1] });
+      if (cmpM) fields.push({ icon: '💻', label: 'Machine',   value: cmpM[1] });
+      if (msgM) fields.push({ icon: '📋', label: 'Detail',    value: msgM[1].trim().slice(0, 200) });
+      return fields;
+    }
+
+    // ── PROCESS STARTED/TERMINATED
+    if (/Process Started:/i.test(raw)) {
+      const pnM = raw.match(/Process Started:\s*([^\s(]+)/i);
+      const pidM = raw.match(/PID:\s*(\d+)/i);
+      const usrM = raw.match(/User:\s*([^)]+)/i);
+      if (pnM) fields.push({ icon: '🚀', label: 'App Launched', value: pnM[1] });
+      if (pidM) fields.push({ icon: '🔢', label: 'Process ID', value: pidM[1] });
+      if (usrM && usrM[1] !== 'N/A') fields.push({ icon: '👤', label: 'User', value: usrM[1].trim() });
+      return fields;
+    }
+    if (/Process Terminated:/i.test(raw)) {
+      const pidM = raw.match(/PID\s*(\d+)/i);
+      fields.push({ icon: '🛑', label: 'Process Ended', value: pidM ? `PID ${pidM[1]}` : raw });
+      return fields;
+    }
+
+    // ── ACTIVE WINDOW FOCUS  (Window Focus: Title (process.exe))
+    if (/Window Focus:/i.test(raw)) {
+      const wfM = raw.match(/Window Focus:\s*(.+?)\s*\(([^)]+)\)/i);
+      if (wfM) {
+        fields.push({ icon: '🖥️', label: 'Window Opened', value: wfM[1].trim() });
+        fields.push({ icon: '⚙️', label: 'Application',   value: wfM[2].trim() });
+      } else {
+        fields.push({ icon: '🖥️', label: 'Window', value: raw.replace(/Window Focus:\s*/i, '') });
+      }
+      return fields;
+    }
+
+    // ── POWERSHELL COMMAND
+    if (/PowerShell:/i.test(raw)) {
+      const cmd = raw.replace(/PowerShell:\s*/i, '').trim();
+      fields.push({ icon: '💬', label: 'Command Typed', value: cmd });
+      fields.push({ icon: '🖥️', label: 'Application',   value: 'PowerShell / Terminal' });
+      return fields;
+    }
+
+    // ── USB EVENTS
+    if (/USB Device/i.test(raw)) {
+      const connM   = raw.match(/USB Device Connected:\s*([^(]+)/i);
+      const discM   = raw.match(/USB Device Disconnected:\s*(.+)/i);
+      const deviceM = raw.match(/\(ID:\s*([^)]+)\)/i);
+      if (connM) {
+        fields.push({ icon: '🔌', label: 'USB Plugged In', value: connM[1].trim() });
+        if (deviceM) fields.push({ icon: '🔢', label: 'Device ID', value: deviceM[1].trim() });
+      } else if (discM) {
+        fields.push({ icon: '🔌', label: 'USB Removed', value: discM[1].trim() });
+      }
+      return fields;
+    }
+
+    // ── Fallback: generic key=value scan
+    const kvRe = /([A-Za-z_][A-Za-z0-9_\-]*)=("([^"]*)"|([\S]+))/g;
+    let m;
+    while ((m = kvRe.exec(raw)) !== null) {
+      const key = m[1].toLowerCase();
+      const val = m[3] !== undefined ? m[3] : m[4];
+      const iconMap = {
+        user:'👤', username:'👤', machine:'💻', hostname:'💻',
+        process:'⚙️', proc:'⚙️', port:'🔌', file:'📁', path:'📁',
+        ip:'🌍', src_ip:'🌍', dst_ip:'🌍', device:'💾', action:'⚡', event:'⚡',
+      };
+      fields.push({ icon: iconMap[key] || '📄', label: capitalize(m[1].replace(/_/g,' ')), value: val });
+    }
+    if (fields.length === 0) {
+      const clean = raw.replace(/^\[[^\]]+\]\s*/, '').trim();
+      if (clean) fields.push({ icon: '📋', label: 'Details', value: clean.slice(0, 300) });
+    }
+    return fields;
+  }
+
+  function capitalize(str) {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : str;
+  }
+  function humaniseRule(name) {
+    if (!name) return name;
+    return name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  }
+  function friendlyEventType(t) {
+    const m = { AUDIT_SUCCESS:'Login Success', AUDIT_FAILURE:'Login Failed', ERROR:'System Error', WARNING:'Warning', INFO:'Info' };
+    return m[t] || t;
+  }
+
+  // Determine source category from log content to show a readable badge
+  function detectSource(log, ruleName) {
+    if (!log && !ruleName) return { icon: '📋', label: 'Event' };
+    const text = (log || '') + (ruleName || '');
+    if (/Browser=/i.test(log))                           return { icon: '🌐', label: 'Browser' };
+    if (/PowerShell:/i.test(log))                        return { icon: '💬', label: 'Terminal' };
+    if (/Window Focus:/i.test(log))                      return { icon: '🖥️', label: 'App Focus' };
+    if (/Process (Started|Terminated)/i.test(log))       return { icon: '🚀', label: 'Process' };
+    if (/USB Device/i.test(log))                         return { icon: '🔌', label: 'USB' };
+    if (/EventID=/i.test(log))                           return { icon: '🛡️', label: 'System Log' };
+    return { icon: '📋', label: 'Event' };
+  }
+
+  /* ─── Toast ───────────────────────────────────────────────────── */
+  function Toast({ t, onClose }) {
+    return (
+      <div className={`toast ${t.severity}`} onClick={onClose}>
+        <div className="toast-top">
+          <span className={`toast-level ${t.severity}`}>{t.severity}</span>
+          <span className="toast-machine">💻 {t.hostname}</span>
+          <span className="toast-close">✕</span>
+        </div>
+        <div className="toast-body">{humaniseRule(t.rule_name)}</div>
+        <div className="toast-time">{fmtFull(t.timestamp)}</div>
+      </div>
+    );
+  }
+
+  /* ─── Detail Row ──────────────────────────────────────────────── */
+  function AlertDetail({ alert: a }) {
+    const parsed = useMemo(() => parseLog(a.matched_log, a.rule_name), [a.matched_log, a.rule_name]);
+    const base = [
+      { icon: '🕐', label: 'Time',     value: fmtFull(a.timestamp) },
+      { icon: '💻', label: 'Machine',  value: a.hostname || '—' },
+      { icon: '⚠️', label: 'Severity', value: a.severity },
+      { icon: '📋', label: 'Rule',     value: humaniseRule(a.rule_name) },
+    ];
+    // Merge: base fields + parsed fields (excluding duplicates by label)
+    const baseLabels = new Set(base.map(f => f.label));
+    const extra = parsed.filter(f => !baseLabels.has(f.label));
+    const all = [...base, ...extra];
+
+    return (
+      <div className="detail-grid">
+        {all.map((f, i) => (
+          <div key={i} className="detail-field">
+            <div className="detail-icon">{f.icon}</div>
+            <div>
+              <div className="detail-key">{f.label}</div>
+              <div className="detail-val">{f.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /* ─── App ─────────────────────────────────────────────────────── */
+  function App() {
+    const [alerts, setAlerts]     = useState([]);
+    const [agents, setAgents]     = useState([]);
+    const [stats,  setStats]      = useState({ CRITICAL:0, HIGH:0, MEDIUM:0, LOW:0 });
+    const [lastSync, setLastSync] = useState(null);
+
+    const [tabFilter,   setTabFilter]   = useState('all');
+    const [sevFilter,   setSevFilter]   = useState(null);
+    const [agentFilter, setAgentFilter] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [dateFilter,  setDateFilter]  = useState('');
+    const [expanded,    setExpanded]    = useState(new Set());
+    const [toasts,      setToasts]      = useState([]);
+
+    const knownIds = useRef(new Set());
+    const isFirst  = useRef(true);
+
+    /* ─ Fetch ─ */
+    const fetchData = useCallback(async () => {
+      try {
+        let url = `${API_BASE}/alerts?limit=500`;
+        if (dateFilter) url += '&date=' + encodeURIComponent(dateFilter);
+
+        const [alertsData, agentsData, statsData] = await Promise.all([
+          fetch(url).then(r => r.json()),
+          fetch(`${API_BASE}/agents`).then(r => r.json()),
+          fetch(`${API_BASE}/alerts/stats`).then(r => r.json()),
+        ]);
+
+        if (!isFirst.current) {
+          const brand = alertsData.filter(
+            a => ['HIGH','CRITICAL'].includes(a.severity) && !knownIds.current.has(a.id)
+          );
+          if (brand.length) {
+            setToasts(prev =>
+              [...brand.map(a => ({ ...a, _tid: `${a.id}-${Date.now()}` })), ...prev].slice(0, 4)
+            );
+          }
+        }
+        isFirst.current = false;
+        alertsData.forEach(a => knownIds.current.add(a.id));
+
+        setAlerts(alertsData);
+        setAgents(agentsData);
+        setStats(statsData);
+        setLastSync(Date.now());
+      } catch(e) { console.error('Fetch error:', e); }
+    }, [dateFilter]);
+
+    useEffect(() => {
+      fetchData();
+      const iv = setInterval(fetchData, 15000);
+      return () => clearInterval(iv);
+    }, [fetchData]);
+
+    /* ─ Actions ─ */
+    const handleAck = async (id, e) => {
+      e.stopPropagation();
+      await fetch(`${API_BASE}/alerts/${id}/acknowledge`, { method:'POST' });
+      setAlerts(p => p.filter(a => a.id !== id));
+      setExpanded(p => { const n = new Set(p); n.delete(id); return n; });
+    };
+
+    const toggleRow = id => setExpanded(p => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+    /* ─ Derived ─ */
+    const filtered = useMemo(() => {
+      let f = alerts;
+      if (tabFilter === 'unacked')       f = f.filter(a => !a.acknowledged);
+      if (tabFilter === 'high_critical') f = f.filter(a => ['HIGH','CRITICAL'].includes(a.severity));
+      if (sevFilter)   f = f.filter(a => a.severity === sevFilter);
+      if (agentFilter) f = f.filter(a => a.hostname === agentFilter);
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        f = f.filter(a =>
+          (a.rule_name   || '').toLowerCase().includes(q) ||
+          (a.matched_log || '').toLowerCase().includes(q) ||
+          (a.hostname    || '').toLowerCase().includes(q)
+        );
+      }
+      return f;
+    }, [alerts, tabFilter, sevFilter, agentFilter, searchQuery]);
+
+    const onlineMachines = agents.filter(a => (Date.now()/1000 - a.last_seen) < 60).length;
+    const unackedCount   = alerts.filter(a => !a.acknowledged).length;
+
+    return (
+      <div>
+        {/* ── Header ── */}
+        <div className="header">
+          <div className="logo-icon">🖥️</div>
+          <div>
+            <div className="header-title">Lab Monitor</div>
+            <div className="header-subtitle">Staff Dashboard</div>
+          </div>
+          <div className="header-spacer" />
+          {agentFilter && (
+            <span className="active-filter-chip" onClick={() => setAgentFilter(null)}>
+              💻 {agentFilter} &nbsp;×
+            </span>
+          )}
+          <div className="refresh-pill">
+            <div className="live-dot" />
+            {lastSync ? `Updated ${timeAgo(lastSync/1000)}` : 'Loading…'}
+          </div>
+        </div>
+
+        {/* ── Summary Bar ── */}
+        <div className="summary-bar">
+          <div className="sum-item">
+            <div className="sum-icon">🖥️</div>
+            <div>
+              <div className="sum-value">{onlineMachines}</div>
+              <div className="sum-label">Machines Online</div>
+            </div>
+          </div>
+          <div className="sum-sep" />
+          <div className="sum-item">
+            <div className="sum-icon">📋</div>
+            <div>
+              <div className="sum-value">{alerts.length}</div>
+              <div className="sum-label">Alerts Today</div>
+            </div>
+          </div>
+          <div className="sum-sep" />
+          <div className="sum-item">
+            <div className="sum-icon">🔔</div>
+            <div>
+              <div className="sum-value">{unackedCount}</div>
+              <div className="sum-label">Unacknowledged</div>
+            </div>
+          </div>
+          {stats.CRITICAL > 0 && <>
+            <div className="sum-sep" />
+            <div className="sum-item">
+              <div className="sum-icon">🔴</div>
+              <div>
+                <div className="sum-value" style={{color:'var(--critical)'}}>{stats.CRITICAL}</div>
+                <div className="sum-label">Critical — Act Now</div>
+              </div>
+            </div>
+          </>}
+        </div>
+
+        {/* ── Main ── */}
+        <main>
+          <div className="col-left">
+            {/* Stat Cards */}
+            <div className="stat-grid">
+              {[
+                { sev:'CRITICAL', label:'Critical', desc:'Immediate action' },
+                { sev:'HIGH',     label:'High',     desc:'Review soon'      },
+                { sev:'MEDIUM',   label:'Medium',   desc:'Monitor closely'  },
+                { sev:'LOW',      label:'Low',       desc:'Informational'    },
+              ].map(({ sev, label, desc }) => {
+                const count = dateFilter
+                  ? alerts.filter(a => a.severity === sev).length
+                  : (stats[sev] || 0);
+                const active = sevFilter === sev;
+                return (
+                  <div
+                    key={sev}
+                    className={`stat-card ${sev}${active ? ' active-filter' : ''}`}
+                    onClick={() => setSevFilter(active ? null : sev)}
+                    title={active ? 'Click to clear filter' : `Click to filter by ${label}`}
+                  >
+                    <div className="stat-label" style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                      {label}
+                      {active && <span style={{fontSize:10,background:'rgba(255,255,255,.12)',padding:'1px 6px',borderRadius:4}}>filtered</span>}
+                    </div>
+                    <div className="stat-value">{count}</div>
+                    <div className="stat-desc">{desc}</div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Toolbar */}
+            <div className="toolbar">
+              <div className="tab-group">
+                <button className={`tab-btn ${tabFilter==='all'?'active':''}`}           onClick={()=>setTabFilter('all')}>All</button>
+                <button className={`tab-btn ${tabFilter==='unacked'?'active':''}`}        onClick={()=>setTabFilter('unacked')}>Unacknowledged</button>
+                <button className={`tab-btn ${tabFilter==='high_critical'?'active':''}`} onClick={()=>setTabFilter('high_critical')}>⚠️ High &amp; Critical</button>
+              </div>
+              <div className="toolbar-spacer" />
+              <input type="date" className="date-input" value={dateFilter} onChange={e=>setDateFilter(e.target.value)} title="Filter by date" />
+              <input type="text" className="search-input" placeholder="🔍  Search alerts…" value={searchQuery} onChange={e=>setSearchQuery(e.target.value)} />
+            </div>
+
+            {/* Alert Table */}
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">🚨 Alert Feed</span>
+                <span className="card-count">{filtered.length} alert{filtered.length!==1?'s':''}</span>
+              </div>
+              <div className="alert-list">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Severity</th>
+                      <th>Source</th>
+                      <th>What Happened</th>
+                      <th>Machine</th>
+                      <th>Action</th>
+                      <th style={{width:28}}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td colSpan="7">
+                          <div className="empty-state">
+                            <div className="empty-icon">✅</div>
+                            <div className="empty-title">{dateFilter ? 'No alerts on this date' : 'Nothing to show'}</div>
+                            <div className="empty-desc">
+                              {dateFilter ? `No activity was flagged on ${dateFilter}.` : 'No alerts match the current filter.'}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      filtered.map(a => {
+                        const src = detectSource(a.matched_log, a.rule_name);
+                        return (
+                          <React.Fragment key={a.id}>
+                            <tr className="alert-row" onClick={() => toggleRow(a.id)}>
+                              <td style={{color:'var(--text-3)',whiteSpace:'nowrap',fontSize:12}}>{fmtFull(a.timestamp)}</td>
+                              <td><span className={`sev-badge ${a.severity}`}>{a.severity}</span></td>
+                              <td><span className="src-badge">{src.icon} {src.label}</span></td>
+                              <td style={{fontWeight:500}}>{humaniseRule(a.rule_name)}</td>
+                              <td>
+                                <span className="hostname-link" onClick={e=>{e.stopPropagation();setAgentFilter(a.hostname);}} title="Filter by this machine">
+                                  {a.hostname}
+                                </span>
+                              </td>
+                              <td>
+                                <button className="ack-btn" onClick={e=>handleAck(a.id,e)} title="Mark as acknowledged">
+                                  ✓ Acknowledge
+                                </button>
+                              </td>
+                              <td style={{textAlign:'center'}}>
+                                <span className={`expand-chevron ${expanded.has(a.id)?'open':''}`}>▾</span>
+                              </td>
+                            </tr>
+                            {expanded.has(a.id) && (
+                              <tr className="detail-row">
+                                <td colSpan="7"><AlertDetail alert={a} /></td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* ── Right Column ── */}
+          <div className="col-right">
+            {/* Agent Cards */}
+            <div className="card">
+              <div className="card-header">
+                <span className="card-title">🖥️ Lab Machines</span>
+                <span className="card-count">{agents.length} total</span>
+              </div>
+              <div className="agents-grid">
+                {agents.length === 0 ? (
+                  <div style={{padding:24,textAlign:'center',color:'var(--text-3)',fontSize:13}}>No machines detected yet.</div>
+                ) : (
+                  agents.map(a => {
+                    const online = (Date.now()/1000 - a.last_seen) < 60;
+                    const sel    = agentFilter === a.hostname;
+                    return (
+                      <div
+                        key={a.agent_id}
+                        className={`agent-card${sel?' selected':''}`}
+                        onClick={() => setAgentFilter(sel ? null : a.hostname)}
+                        title={sel ? 'Click to clear filter' : 'Click to filter by this machine'}
+                      >
+                        <div className="agent-card-top">
+                          <div className={`status-dot ${online?'online':'offline'}`} />
+                          <div className="agent-hostname">{a.hostname}</div>
+                          <span className={`status-label-badge ${online?'online':'offline'}`}>
+                            {online ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                        <div className="agent-last-seen">Last seen {timeAgo(a.last_seen)}</div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* What's being monitored */}
+            <div className="card" style={{padding:'16px 18px'}}>
+              <div className="card-title" style={{marginBottom:12}}>📡 What We Monitor</div>
+              {[
+                { icon:'🌐', label:'Browser Activity',    desc:'Sites visited, searches' },
+                { icon:'🚀', label:'App Launches',        desc:'Programs opened or closed' },
+                { icon:'🖥️', label:'Active Window',       desc:'Which app is in use' },
+                { icon:'💬', label:'Terminal Commands',   desc:'PowerShell commands typed' },
+                { icon:'🔌', label:'USB Devices',         desc:'Drives plugged in/out' },
+                { icon:'🛡️', label:'System Events',       desc:'Logins, errors, security' },
+              ].map(({ icon, label, desc }) => (
+                <div key={label} style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                  <span style={{fontSize:16,width:22,textAlign:'center'}}>{icon}</span>
+                  <div>
+                    <div style={{fontSize:12,fontWeight:600,color:'var(--text)'}}>{label}</div>
+                    <div style={{fontSize:11,color:'var(--text-3)'}}>{desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Severity Guide */}
+            <div className="card" style={{padding:'16px 18px'}}>
+              <div className="card-title" style={{marginBottom:12}}>📖 Severity Guide</div>
+              {[
+                { sev:'CRITICAL', txt:'Needs immediate attention' },
+                { sev:'HIGH',     txt:'Should be reviewed soon'   },
+                { sev:'MEDIUM',   txt:'Worth keeping an eye on'   },
+                { sev:'LOW',      txt:'Informational only'        },
+              ].map(({ sev, txt }) => (
+                <div key={sev} style={{display:'flex',alignItems:'center',gap:10,marginBottom:10}}>
+                  <span className={`sev-badge ${sev}`} style={{minWidth:72}}>{sev}</span>
+                  <span style={{fontSize:11,color:'var(--text-2)'}}>{txt}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </main>
+
+        {/* ── Toasts ── */}
+        <div className="toast-wrapper">
+          {toasts.map(t => (
+            <Toast key={t._tid} t={t} onClose={() => setToasts(p => p.filter(x => x._tid !== t._tid))} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

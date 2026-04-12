@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+
+# Database
+*.db
+
+# Env files
+.env
+
+# Cache and Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual Environments
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Project Specific Data (DO NOT COMMIT)
+soc_platform.db
+*.db
+*.sqlite
+*.sqlite3
+logs/
+.pytest_cache/
+
+# Security and Cryptographic Material
+manager/certs/
+*.crt
+*.key
+*.pem
+*.pfx
+
+# OS Auto-generated
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDEs
+.idea/
+.vscode/
+*.swp
